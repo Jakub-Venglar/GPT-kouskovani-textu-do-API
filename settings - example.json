@@ -4,10 +4,10 @@
   "modelEngine": "gpt-3.5-turbo",
   "inputName": "krmeni.txt",  
   "resultName": "vysledek.txt",  
-  "listToExclude": ["(host)","(moderátorka)","(moderátor)","Neznámý mluvčí"],
+  "listToExclude": ["PokudSeVyskytneVOdstavci","ignorovaný-řetězec","odstavec-se-nechá-jak-je-Např:","Neznámý mluvčí"],
   "gptExclude": ["Text je gramaticky správný","není třeba provádět žádnou korekturu","Tento text je gramaticky správný","Není potřeba provádět žádnou gramatickou korekturu","neobsahuje dostatek informací ani smysluplnou větu","Tento text není kompletní věta"],
   "prompt": "Udělej gramatickou korekturu textu. Nepřidávej nic, co už v textu není.",
   "includeReplacement": [true],
-  "replacements": {"(moderátorka)":"{% include 2050/transcript-person.html id=\"vrtalova\" %}","(moderátor)":"{% include 2050/transcript-person.html id=\"holik\" %}"},
+  "replacements": {"(moderátorka)":"Jméno nebo kód, kterým se například nahradí moderátorka","Jméno nebo kód, kterým se například nahradí moderátor"},
   "tooShort": 55
 }
