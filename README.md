@@ -1,7 +1,7 @@
 # GPT-kouskovani-textu-do-API
 Script, který naporcuje dodaný text po odstavcích (resp.dělí přes /n) a posílá ho do GPT přes OpenAI API.
-Potřebujete API key, který najdete ve svém OpenAI účtu.
-V první verzi bez kontroly, zda je počet tokenů ok. Většina běžných odstavců vyhovuje.
+Potřebujete API key, který najdete ve svém OpenAI účtu - budete za něj platit, ale reálně třeba přepis epizody podcastu stojí 17 centů.
+V první verzi je skript bez kontroly, zda je počet tokenů ok. Většina běžných odstavců ale vyhovuje (testováno na přepisech epizod).
 
 # Co obsahuje nastavení:
 - temperature: Hodnota, která GPT říká, jak moc být "kreativní". Pro korektury se nám osvědčilo 0.5. Může být 0 (velmi deterministické chování) - 2 (velmi volné chování)
@@ -16,6 +16,7 @@ V první verzi bez kontroly, zda je počet tokenů ok. Většina běžných odst
 
 # Jak používat
 - Po stažení smažte z názvů souborů settings a krmení " - example" a doplňte svá data a nastavení.
-- do setting vložte váš API key
+- Do "krmení.txt" překopírujte svůj dlouhý text. Při převzetí z většiných rozumých editorů do txt by to mělo mít "enter" vždycky na konci odstavce - to je důležité protože podle něj se to pak kouskuje.
+- Do settings vložte váš API key, případně upravte, co je potřeba.
 - Spusťe script a počkejte si na výsledek.
 - Zpracované odstavce jsou postupně přidávány do souboru s názvem podle nastavení. Tzn. pokud vám script z jakéhokoliv důvodu spadne, po znovuspuštění bude zase přidávat data na konec souboru (ale zpracování pojede od začátku - ošetření tohoto bude v nějaké další verzi). 
