@@ -1,6 +1,6 @@
 import os, openai, json
 
-#improvement - dát try/except na openai.error.RateLimitError - počkat a pokračovat od posledního úseku (tzn někde ukládat do slovníku již zpracované nebo počítat odstavce a na začátku přeskočit daný počet odstavců)
+#todo improvement - dát try/except na openai.error.RateLimitError - počkat a pokračovat od posledního úseku (tzn někde ukládat do slovníku již zpracované nebo počítat odstavce a na začátku přeskočit daný počet odstavců)
 #a taky zpomalit posílání
 
 #načte nastavení a patřičné proměnné
