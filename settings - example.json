@@ -8,6 +8,6 @@
   "gptExclude": ["Text je gramaticky správný","není třeba provádět žádnou korekturu","Tento text je gramaticky správný","Není potřeba provádět žádnou gramatickou korekturu","neobsahuje dostatek informací ani smysluplnou větu","Tento text není kompletní věta"],
   "prompt": "Udělej gramatickou korekturu textu. Nepřidávej nic, co už v textu není.",
   "includeReplacement": [true],
-  "replacements": {"(moderátorka)":"Jméno nebo kód, kterým se například nahradí moderátorka","Jméno nebo kód, kterým se například nahradí moderátor"},
+  "replacements": {"(moderátorka)":"Jméno nebo kód, kterým se například nahradí moderátorka","(moderátor)":"Jméno nebo kód, kterým se například nahradí moderátor"},
   "tooShort": 55
 }
