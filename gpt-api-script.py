@@ -1,7 +1,7 @@
 import os, openai, json, tiktoken, time
 
 # pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
-# počítat tokeny pro rate limit
+# add "system" message settings for role
 
 #------------
 #načte nastavení a patřičné proměnné
@@ -20,6 +20,7 @@ replacements = settings['replacements']
 temp = settings['temperature']
 gpt_annoucements_to_exclude = settings['gptExclude']
 too_short = settings['tooShort']
+system = settings["system_message"]
 
 
 #podle použitého modelu nastavíme limity
@@ -48,7 +49,7 @@ def generate_text_from_paragraphs(paragraph, prompt):
     
     response = openai.ChatCompletion.create(
         model=model_engine,
-        messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}],
+        messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}], # na základě testu zatím posílám bez systemu
         max_tokens=int(model_token_context*0.5), # The maximum number of tokens to generate in the chat completion.
         temperature=temp,
         n = 1,
@@ -179,7 +180,7 @@ for i in range(len(paragraphs)):
         total_used_tokens += used_tokens
 
         if any(correct_info in gpt_text for correct_info in gpt_annoucements_to_exclude): #pokud GPT vyplivnul nějaké moudro, které máme nastaveno, že nechceme slyšet, tak raději vloží originální text
-            print('Prý' + gpt_text + '\n' + '...' + '\n' 'Vložím raději originál:' + '\n')
+            print('Prý -- ' + gpt_text + ' --\n' + '...' + '\n' 'Vložím raději originál:' + '\n')
             print(paragraphs[i][1] + '\n')
             generated_text = (paragraphs[i][1] + '\n\n')
 
@@ -197,7 +198,7 @@ for i in range(len(paragraphs)):
         tokens_ok = check_token_usage(time_started,t2,total_used_tokens)
 
         if tokens_ok == False:
-            print('přešvihávám token limit za minutu - počkáme si')
+            print('Přešvihávám limit tokenů za minutu - počkáme si')
             while True:
                 time.sleep(5)
                 t3 = time.time()
