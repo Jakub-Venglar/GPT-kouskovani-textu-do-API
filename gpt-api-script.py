@@ -1,7 +1,6 @@
 import os, openai, json, tiktoken, time
 
 #todo improvement - dát try/except na openai.error.RateLimitError - počkat a pokračovat od posledního úseku (tzn někde ukládat do slovníku již zpracované nebo počítat odstavce a na začátku přeskočit daný počet odstavců)
-#a taky zpomalit posílání
 # dělit text do tokenů
 # počítat tokeny pro rate limit
 
@@ -22,13 +21,25 @@ temp = settings['temperature']
 gpt_annoucements_to_exclude = settings['gptExclude']
 too_short = settings['tooShort']
 
+if model_engine == 'gpt-3.5-turbo':
+    model_context = 4096
+elif model_engine == 'gpt-3.5-turbo-16k':
+    model_context = 4096*4
+
+elif model_engine == 'gpt-4':
+    model_context = 4096*2 #8k
+
+print('Použitý model: ' + str(model_engine))
+print('Počet tokenů v kontextu: ' + str(model_context))
+
+
 rate_limit_per_minute = 200 #kolikrát můžeme poslat request - podle gpt4 - https://platform.openai.com/account/rate-limits
 rate_limit_tokens = 10000
 necessary_delay = 60.0 / rate_limit_per_minute
 
 openai.api_key = api_key
 
-#max_tokens_per_request = 3500
+max_tokens_per_request = int(model_context*0.4)
 
 #funkce, která posílá kousky textu do GPT API
 
@@ -38,7 +49,7 @@ def generate_text_from_paragraphs(paragraph, prompt):
     response = openai.ChatCompletion.create(
         model=model_engine,
         messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}],
-        #max_tokens=max_tokens_per_request, ---------The maximum number of tokens to generate in the chat completion.
+        max_tokens=int(model_context*0.5), # The maximum number of tokens to generate in the chat completion.
         temperature=temp,
         n = 1,
         stop=None,
@@ -47,13 +58,11 @@ def generate_text_from_paragraphs(paragraph, prompt):
     message = response['choices'][0]['message']['content']
     return message
 
-def num_tokens_from_string(string: str) -> int:
+def count_tokens (string: str) -> int:
     """Returns the number of tokens in a text string."""
     encoding = tiktoken.encoding_for_model(model_engine)
     num_tokens = len(encoding.encode(string))
     return num_tokens
-
-#max_tokens_per_paragraph = 850
 
 #načte zdrojový text a rozkouskuje ho po odstavcích (enter na konci řádku)
 
@@ -88,9 +97,10 @@ for i in range(len(paragraphs_raw)):
 
     elif len(paragraphs_raw[i])<too_short: #pokud je odstavec moc krátký, GPT by to zmátlo, tak zkusíme přidat další nebo jej pouze zkopírujeme
         temporary_text = paragraphs_raw[i] #základem je text z aktuálního odstavce
-        looper = 0
         for j in range(i+1,len(paragraphs_raw)):
-            if any(substring in paragraphs_raw[j] for substring in list_to_exclude): #kontrolujeme následující odstavec na vyloučené výrazy
+            if any(substring in paragraphs_raw[j] for substring in list_to_exclude) or count_tokens(temporary_text)+count_tokens(paragraphs_raw[j]) >= max_tokens_per_request: 
+                #kontrolujeme následující odstavec na vyloučené výrazy nebo na celkové množství tokenů, pokud něco z toho je pravda, odstavec už nezařadíme
+                
                 if len(temporary_text) < too_short: # zároveň je zatím poskládaný text moc krátký, dáme odpovídající příznak
                     paragraphs.append(['kratky',temporary_text])
                 else: 
@@ -100,10 +110,9 @@ for i in range(len(paragraphs_raw)):
                 break
             
             else:
-                temporary_text = temporary_text + '\n' + paragraphs_raw[j+looper] #nic nebrání přidat další kousek textu
+                temporary_text = temporary_text + '\n' + paragraphs_raw[j] #nic nebrání přidat další kousek textu
                 to_add = True
-                skip.append(j+looper)
-                looper += 1
+                skip.append(j)
         
         if to_add == True:
             paragraphs.append([True,temporary_text])
