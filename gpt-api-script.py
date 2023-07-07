@@ -1,9 +1,9 @@
 import os, openai, json, tiktoken, time
 
-#todo improvement - dát try/except na openai.error.RateLimitError - počkat a pokračovat od posledního úseku (tzn někde ukládat do slovníku již zpracované nebo počítat odstavce a na začátku přeskočit daný počet odstavců)
-# dělit text do tokenů
+# pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
 # počítat tokeny pro rate limit
 
+#------------
 #načte nastavení a patřičné proměnné
 
 with open('settings.json','r', encoding="utf-8") as file:
@@ -21,25 +21,25 @@ temp = settings['temperature']
 gpt_annoucements_to_exclude = settings['gptExclude']
 too_short = settings['tooShort']
 
-if model_engine == 'gpt-3.5-turbo':
-    model_context = 4096
-elif model_engine == 'gpt-3.5-turbo-16k':
-    model_context = 4096*4
 
-elif model_engine == 'gpt-4':
-    model_context = 4096*2 #8k
+#podle použitého modelu nastavíme limity
+#https://platform.openai.com/account/rate-limits
+
+model_context_dict = {'gpt-3.5-turbo':{'context':4096, 'rpm': 3500, 'tpm':90000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000}}
+model_token_context = model_context_dict[model_engine]['context']
+
 
 print('Použitý model: ' + str(model_engine))
-print('Počet tokenů v kontextu: ' + str(model_context))
+print('Počet tokenů v kontextu: ' + str(model_token_context))
 
 
-rate_limit_per_minute = 200 #kolikrát můžeme poslat request - podle gpt4 - https://platform.openai.com/account/rate-limits
-rate_limit_tokens = 10000
+rate_limit_per_minute = model_context_dict[model_engine]['rpm'] #kolikrát můžeme poslat request 
+rate_limit_tokens = model_context_dict[model_engine]['tpm']
 necessary_delay = 60.0 / rate_limit_per_minute
 
 openai.api_key = api_key
 
-max_tokens_per_request = int(model_context*0.4)
+max_tokens_per_request = int(model_token_context*0.4)
 
 #funkce, která posílá kousky textu do GPT API
 
@@ -49,20 +49,30 @@ def generate_text_from_paragraphs(paragraph, prompt):
     response = openai.ChatCompletion.create(
         model=model_engine,
         messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}],
-        max_tokens=int(model_context*0.5), # The maximum number of tokens to generate in the chat completion.
+        max_tokens=int(model_token_context*0.5), # The maximum number of tokens to generate in the chat completion.
         temperature=temp,
         n = 1,
         stop=None,
         timeout=5
     )
     message = response['choices'][0]['message']['content']
-    return message
+    used_tokens =  response["usage"]['total_tokens']
+    gpt_response = [message, used_tokens]
+    return gpt_response
 
 def count_tokens (string: str) -> int:
     """Returns the number of tokens in a text string."""
     encoding = tiktoken.encoding_for_model(model_engine)
     num_tokens = len(encoding.encode(string))
     return num_tokens
+
+def check_token_usage(time_started,time,total_used_tokens):
+    minutes = (time - time_started)/60
+    print(str((total_used_tokens/minutes) + model_token_context) + ' >>> ' + str(rate_limit_tokens))
+    if rate_limit_tokens <= (total_used_tokens/minutes) + model_token_context:
+        return False
+    if rate_limit_tokens > (total_used_tokens/minutes) + model_token_context:
+        return True
 
 #načte zdrojový text a rozkouskuje ho po odstavcích (enter na konci řádku)
 
@@ -130,7 +140,12 @@ print('Naporcováno a připraveno k magii...' + '\n')
 
 #smyčka, která rozkouskovaný text postupně dávkuje funkci pro zpracování v GPT
 
+total_used_tokens = 0
+
 for i in range(len(paragraphs)):
+    if i == 0:
+        time_started = time.time()
+
     if paragraphs[i][0] == 'kratky': 
         
         #pokud je odstavec moc krátký, GPT by to zmátlo, tak jej jen zkopírujeme
@@ -153,10 +168,15 @@ for i in range(len(paragraphs)):
 
     elif paragraphs[i][0] == True:
         print('Předávám text do GPT...' + '\n') #předání textu do GPT
+
         t = time.time()
-        gpt_text = generate_text_from_paragraphs(paragraphs[i][1], prompt) + '\n\n'
+        gpt_response = generate_text_from_paragraphs(paragraphs[i][1], prompt)
+        gpt_text = gpt_response[0] + '\n\n'
+
         print('GPT: ' + gpt_text)
         gpt_processed = True
+        used_tokens =  gpt_response[1]
+        total_used_tokens += used_tokens
 
         if any(correct_info in gpt_text for correct_info in gpt_annoucements_to_exclude): #pokud GPT vyplivnul nějaké moudro, které máme nastaveno, že nechceme slyšet, tak raději vloží originální text
             print('Prý' + gpt_text + '\n' + '...' + '\n' 'Vložím raději originál:' + '\n')
@@ -173,9 +193,21 @@ for i in range(len(paragraphs)):
         if time_between_loops < necessary_delay:
             delay = necessary_delay - time_between_loops
             time.sleep(delay)
+        
+        tokens_ok = check_token_usage(time_started,t2,total_used_tokens)
+
+        if tokens_ok == False:
+            print('přešvihávám token limit za minutu - počkáme si')
+            while True:
+                time.sleep(5)
+                t3 = time.time()
+                tokens_ok = check_token_usage(time_started,t3,total_used_tokens)
+                if tokens_ok == True:
+                    break
     
 
     with open(result_name, 'a', encoding='utf-8') as file: # na závěr smyčky přidá text na konec souboru s výsledkem, postupně tak přidává jednotlivé odstavce
                 file.write(generated_text)
+
 
 print('***HOTOVO***') #je li vše zpracováno, dá nám vědět
