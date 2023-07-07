@@ -95,6 +95,13 @@ skip = []
 for i in range(len(paragraphs_raw)):
     if len(paragraphs_raw[i])<1:
         pass
+    if len(paragraphs_raw[i])>max_tokens_per_request:
+        #primitivní prozatimní řešení, nicméně na to přešvihnout limit je potřeba fakt dlouhý text
+
+        print("Tenhle odstavec je moc dlouhý. Někde ho rozděl a zkus to znovu" + "\n\n")
+        print(paragraphs_raw[i])
+        break
+
     if i in skip:
         continue
     if any(substring in paragraphs_raw[i] for substring in list_to_exclude): #kontroluje, zda v textu je nějaký řetězec, který jej diskvalifikuje z odeslání do GPT
