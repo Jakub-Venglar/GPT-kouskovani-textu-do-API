@@ -3,6 +3,7 @@ from playsound import playsound
 
 # pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
 # add "system" message settings for role
+# pokud je chyba, zkus to znovu
 
 #------------
 #načte nastavení a patřičné proměnné
@@ -176,27 +177,48 @@ for i in range(len(paragraphs)):
         gpt_processed = False
 
     elif paragraphs[i][0] == True:
+
+        MAX_retries = 5
+        retries = 0
+
         print('Předávám text do GPT...' + '\n') #předání textu do GPT
 
-        t = time.time()
-        gpt_response = generate_text_from_paragraphs(paragraphs[i][1], prompt)
-        gpt_text = gpt_response[0] + '\n\n'
+        while retries < MAX_retries: #smyčka pro opakované pokusy v případě oblíbené rate limit error
+            try: 
 
-        print('GPT: ' + gpt_text)
-        gpt_processed = True
-        used_tokens =  gpt_response[1]
-        total_used_tokens += used_tokens
+                t = time.time()
+                gpt_response = generate_text_from_paragraphs(paragraphs[i][1], prompt)
+                gpt_text = gpt_response[0] + '\n\n'
 
-        if any(correct_info in gpt_text for correct_info in gpt_annoucements_to_exclude): #pokud GPT vyplivnul nějaké moudro, které máme nastaveno, že nechceme slyšet, tak raději vloží originální text
-            print('Prý -- ' + gpt_text + ' --\n' + '...' + '\n' 'Vložím raději originál:' + '\n')
-            print(paragraphs[i][1] + '\n')
-            generated_text = (paragraphs[i][1] + '\n\n')
+                print('GPT: ' + gpt_text)
+                gpt_processed = True
+                used_tokens =  gpt_response[1]
+                total_used_tokens += used_tokens
 
-        else:
-            generated_text = gpt_text
+                if any(correct_info in gpt_text for correct_info in gpt_annoucements_to_exclude): #pokud GPT vyplivnul nějaké moudro, které máme nastaveno, že nechceme slyšet, tak raději vloží originální text
+                    print('Prý -- ' + gpt_text + ' --\n' + '...' + '\n' 'Vložím raději originál:' + '\n')
+                    print(paragraphs[i][1] + '\n')
+                    generated_text = (paragraphs[i][1] + '\n\n')
+
+                else:
+                    generated_text = gpt_text
+                
+                break
+
+            except openai.error.RateLimitError:
+                if retries == MAX_retries:
+                    print("Už jsem vyčerpal pokusy, peču na to. UVEDU, ŽE CHYBÍ ODSTAVEC.")
+                    generated_text = "TADY CHYBÍ ODSTAVEC, AI HO NEZVLÁDLA PŘEŽVÝKAT"
+                else:
+                    print("Pokus č. "+str(retries) + " -- Rate limit error - schrupnu si 20 sec a zkusím to znovu")
+                    
+                    retries += 1
+                    time.sleep(20)
+
 
     if gpt_processed == True: #pokud jsme text poslali do GPT, zkontrolujeme rate limits
-        time.sleep(1) # pro jistotu je tam vteřinka navíc natvrdo
+        print("zprocesováno OK")
+        time.sleep(6) # pro jistotu je tam šestivteřinka navíc natvrdo
         t2 = time.time() # nejprve pro čas
         time_between_loops = t2-t
         if time_between_loops < necessary_delay:
