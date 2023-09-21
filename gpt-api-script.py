@@ -213,7 +213,7 @@ for i in range(len(paragraphs)):
                     print("Pokus č. "+str(retries) + " -- Rate limit error - schrupnu si 20 sec a zkusím to znovu")
                     
                     retries += 1
-                    time.sleep(20)
+                    time.sleep(15*(retries)) #při pokusech přidává čekání
 
 
     if gpt_processed == True: #pokud jsme text poslali do GPT, zkontrolujeme rate limits
