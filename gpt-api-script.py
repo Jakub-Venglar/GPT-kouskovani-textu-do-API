@@ -36,7 +36,7 @@ print('Počet tokenů v kontextu: ' + str(model_token_context))
 
 rate_limit_per_minute = model_context_dict[model_engine]['rpm'] #kolikrát můžeme poslat request 
 rate_limit_tokens = model_context_dict[model_engine]['tpm']
-necessary_delay = 60.0 / rate_limit_per_minute
+necessary_delay = (60.0 / rate_limit_per_minute)
 
 openai.api_key = api_key
 
@@ -200,7 +200,7 @@ for i in range(len(paragraphs)):
         time_between_loops = t2-t
         if time_between_loops < necessary_delay:
             delay = necessary_delay - time_between_loops
-            time.sleep(delay)
+            time.sleep(delay+1)
         
         tokens_ok = check_token_usage(time_started,t2,total_used_tokens)
 
