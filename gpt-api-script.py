@@ -1,4 +1,5 @@
 import os, openai, json, tiktoken, time
+from playsound import playsound
 
 # pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
 # add "system" message settings for role
@@ -195,12 +196,13 @@ for i in range(len(paragraphs)):
             generated_text = gpt_text
 
     if gpt_processed == True: #pokud jsme text poslali do GPT, zkontrolujeme rate limits
-
+        time.sleep(1) # pro jistotu je tam vteřinka navíc natvrdo
         t2 = time.time() # nejprve pro čas
         time_between_loops = t2-t
         if time_between_loops < necessary_delay:
             delay = necessary_delay - time_between_loops
-            time.sleep(delay+1)
+            print ("spinkám"+str(delay))
+            time.sleep(delay) 
         
         tokens_ok = check_token_usage(time_started,t2,total_used_tokens)
 
@@ -219,3 +221,4 @@ for i in range(len(paragraphs)):
 
 
 print('***HOTOVO***') #je li vše zpracováno, dá nám vědět
+playsound('hotovo.mp3')
