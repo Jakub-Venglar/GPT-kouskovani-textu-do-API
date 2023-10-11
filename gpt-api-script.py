@@ -96,7 +96,7 @@ skip = []
 
 for i in range(len(paragraphs_raw)):
     if len(paragraphs_raw[i])<1:
-        pass
+        continue
     if len(paragraphs_raw[i])>max_tokens_per_request:
         #primitivní prozatimní řešení, nicméně na to přešvihnout limit je potřeba fakt dlouhý text
 
@@ -106,6 +106,7 @@ for i in range(len(paragraphs_raw)):
 
     if i in skip:
         continue
+
     if any(substring in paragraphs_raw[i] for substring in list_to_exclude): #kontroluje, zda v textu je nějaký řetězec, který jej diskvalifikuje z odeslání do GPT
         for substring2 in list_to_exclude:
             if substring2 in paragraphs_raw[i]:
@@ -114,8 +115,16 @@ for i in range(len(paragraphs_raw)):
                 else:
                     inter_text = (paragraphs_raw[i])
                 paragraphs.append([False,inter_text])
+    else:
+        if len(paragraphs_raw[i])<too_short: # pokud je odstavec moc krátký, dá odpovídající příznak
+            paragraphs.append(['kratky',paragraphs_raw[i]])
+        
+        else: # jinak zapíše, co máme
+            paragraphs.append([True, paragraphs_raw[i]]) 
 
-    elif len(paragraphs_raw[i])<too_short: #pokud je odstavec moc krátký, GPT by to zmátlo, tak zkusíme přidat další nebo jej pouze zkopírujeme
+        
+
+    """ elif len(paragraphs_raw[i])<too_short: #pokud je odstavec moc krátký, GPT by to zmátlo, tak zkusíme přidat další nebo jej pouze zkopírujeme
         temporary_text = paragraphs_raw[i] #základem je text z aktuálního odstavce
         for j in range(i+1,len(paragraphs_raw)):
             if any(substring in paragraphs_raw[j] for substring in list_to_exclude) or count_tokens(temporary_text)+count_tokens(paragraphs_raw[j]) >= max_tokens_per_request: 
@@ -132,14 +141,14 @@ for i in range(len(paragraphs_raw)):
             else:
                 temporary_text = temporary_text + '\n' + paragraphs_raw[j] #nic nebrání přidat další kousek textu
                 to_add = True
-                skip.append(j)
+                skip.append(j) 
         
         if to_add == True:
-            paragraphs.append([True,temporary_text])
+            paragraphs.append([True,temporary_text]) 
         
 
     else:
-        paragraphs.append([True,paragraphs_raw[i]])
+        paragraphs.append([True,paragraphs_raw[i]]) """
 
 generated_text = ""
 
