@@ -28,7 +28,7 @@ system = settings["system_message"]
 #podle použitého modelu nastavíme limity
 #https://platform.openai.com/account/rate-limits
 
-model_context_dict = {'gpt-3.5-turbo':{'context':4096, 'rpm': 3500, 'tpm':90000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000}}
+model_context_dict = {'gpt-3.5-turbo':{'context':4096, 'rpm': 3500, 'tpm':90000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000},'gpt-4 turbo':{'context':4096*2, 'rpm': 200, 'tpm':10000}}
 model_token_context = model_context_dict[model_engine]['context']
 
 
@@ -49,7 +49,7 @@ max_tokens_per_request = int(model_token_context*0.4)
 def generate_text_from_paragraphs(paragraph, prompt):
     #prompt += "\n\n" + "\n\n".join(paragraphs)
     
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model=model_engine,
         messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}], # na základě testu zatím posílám bez systemu
         max_tokens=int(model_token_context*0.5), # The maximum number of tokens to generate in the chat completion.
@@ -214,7 +214,7 @@ for i in range(len(paragraphs)):
                 
                 break
 
-            except openai.error.RateLimitError:
+            except openai.RateLimitError:
                 if retries == MAX_retries:
                     print("Už jsem vyčerpal pokusy, peču na to. UVEDU, ŽE CHYBÍ ODSTAVEC.")
                     generated_text = "TADY CHYBÍ ODSTAVEC, AI HO NEZVLÁDLA PŘEŽVÝKAT"
