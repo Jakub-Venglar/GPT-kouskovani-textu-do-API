@@ -58,8 +58,8 @@ def generate_text_from_paragraphs(paragraph, prompt):
         stop=None,
         timeout=5
     )
-    message = response['choices'][0]['message']['content']
-    used_tokens =  response["usage"]['total_tokens']
+    message = response.choices[0].message.content
+    used_tokens =  response.usage.total_tokens
     gpt_response = [message, used_tokens]
     return gpt_response
 
