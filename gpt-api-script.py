@@ -1,5 +1,5 @@
-import os, openai, json, tiktoken, time
-from playsound import playsound
+import os, openai, json, tiktoken, time, httpx
+#from playsound import playsound
 
 # pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
 # add "system" message settings for role
@@ -28,13 +28,12 @@ system = settings["system_message"]
 #podle použitého modelu nastavíme limity
 #https://platform.openai.com/account/rate-limits
 
-model_context_dict = {'gpt-3.5-turbo':{'context':4096, 'rpm': 3500, 'tpm':90000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000},'gpt-4 turbo':{'context':4096*2, 'rpm': 200, 'tpm':10000}}
+model_context_dict = {'gpt-3.5-turbo':{'context':4096, 'rpm': 3500, 'tpm':90000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000},'gpt-4-1106-preview':{'context':4096*2, 'rpm': 500, 'tpm':100000}}
 model_token_context = model_context_dict[model_engine]['context']
 
 
 print('Použitý model: ' + str(model_engine))
 print('Počet tokenů v kontextu: ' + str(model_token_context))
-
 
 rate_limit_per_minute = model_context_dict[model_engine]['rpm'] #kolikrát můžeme poslat request 
 rate_limit_tokens = model_context_dict[model_engine]['tpm']
@@ -46,22 +45,30 @@ max_tokens_per_request = int(model_token_context*0.4)
 
 #funkce, která posílá kousky textu do GPT API
 
-def generate_text_from_paragraphs(paragraph, prompt):
-    #prompt += "\n\n" + "\n\n".join(paragraphs)
-    
-    response = openai.chat.completions.create(
-        model=model_engine,
-        messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}], # na základě testu zatím posílám bez systemu
-        max_tokens=int(model_token_context*0.5), # The maximum number of tokens to generate in the chat completion.
-        temperature=temp,
-        n = 1,
-        stop=None,
-        timeout=5
-    )
-    message = response.choices[0].message.content
-    used_tokens =  response.usage.total_tokens
-    gpt_response = [message, used_tokens]
-    return gpt_response
+def generate_text_from_paragraphs(paragraph, prompt, max_retries=5):
+    retries = 0
+    while retries < max_retries:
+        try:
+            response = openai.chat.completions.create(
+                model=model_engine,
+                messages=[{"role": "user", "content": prompt},{"role": "user", "content": paragraph}],
+                max_tokens=int(model_token_context*0.5),
+                temperature=temp,
+                n=1,
+                stop=None
+            )
+            message = response.choices[0].message.content
+            used_tokens = response.usage.total_tokens
+            print("Tokenu:" + str(used_tokens))
+            gpt_response = [message, used_tokens]
+            return gpt_response
+
+        except openai.error.OpenAIError as e:
+            print(f"OpenAIError: Pokus {retries + 1} z {max_retries}. Opakování...")
+            retries += 1
+            time.sleep(5)  # Přidává prodlevu před dalším pokusem
+
+    raise Exception("OpenAIError: Překročen maximální počet pokusů.")
 
 def count_tokens (string: str) -> int:
     """Returns the number of tokens in a text string."""
@@ -121,34 +128,6 @@ for i in range(len(paragraphs_raw)):
         
         else: # jinak zapíše, co máme
             paragraphs.append([True, paragraphs_raw[i]]) 
-
-        
-
-    """ elif len(paragraphs_raw[i])<too_short: #pokud je odstavec moc krátký, GPT by to zmátlo, tak zkusíme přidat další nebo jej pouze zkopírujeme
-        temporary_text = paragraphs_raw[i] #základem je text z aktuálního odstavce
-        for j in range(i+1,len(paragraphs_raw)):
-            if any(substring in paragraphs_raw[j] for substring in list_to_exclude) or count_tokens(temporary_text)+count_tokens(paragraphs_raw[j]) >= max_tokens_per_request: 
-                #kontrolujeme následující odstavec na vyloučené výrazy nebo na celkové množství tokenů, pokud něco z toho je pravda, odstavec už nezařadíme
-                
-                if len(temporary_text) < too_short: # zároveň je zatím poskládaný text moc krátký, dáme odpovídající příznak
-                    paragraphs.append(['kratky',temporary_text])
-                else: 
-                    paragraphs.append([True,temporary_text]) #prozatimní text je ok dlouhý, zapíšeme ho a ujistíme se, že se nezapíše dvakrát
-                
-                to_add = False
-                break
-            
-            else:
-                temporary_text = temporary_text + '\n' + paragraphs_raw[j] #nic nebrání přidat další kousek textu
-                to_add = True
-                skip.append(j) 
-        
-        if to_add == True:
-            paragraphs.append([True,temporary_text]) 
-        
-
-    else:
-        paragraphs.append([True,paragraphs_raw[i]]) """
 
 generated_text = ""
 
@@ -214,7 +193,8 @@ for i in range(len(paragraphs)):
                 
                 break
 
-            except openai.RateLimitError:
+            except openai.RateLimitError as e:
+                print(f"Chyba RateLimitError: {e}")
                 if retries == MAX_retries:
                     print("Už jsem vyčerpal pokusy, peču na to. UVEDU, ŽE CHYBÍ ODSTAVEC.")
                     generated_text = "TADY CHYBÍ ODSTAVEC, AI HO NEZVLÁDLA PŘEŽVÝKAT"
@@ -252,4 +232,4 @@ for i in range(len(paragraphs)):
 
 
 print('***HOTOVO***') #je li vše zpracováno, dá nám vědět
-playsound('hotovo.mp3')
+#playsound('hotovo.mp3')
