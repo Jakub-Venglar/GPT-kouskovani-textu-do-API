@@ -28,7 +28,7 @@ system = settings["system_message"]
 #podle použitého modelu nastavíme limity
 #https://platform.openai.com/account/rate-limits
 
-model_context_dict = {'gpt-4o':{'context':4096*8, 'rpm': 500, 'tpm':30000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000},'gpt-4-1106-preview':{'context':4096*2, 'rpm': 500, 'tpm':100000}}
+model_context_dict = {'gpt-4o':{'context':4096*8, 'rpm': 500, 'tpm':30000},'gpt-3.5-turbo-16k':{'context':4096*4, 'rpm': 3500, 'tpm':180000},'gpt-4':{'context':4096*2, 'rpm': 200, 'tpm':10000},'gpt-4-turbo':{'context':4096*2, 'rpm': 500, 'tpm':100000},'gpt-4o-mini':{'context':4096*2, 'rpm': 200, 'tpm':10000}}
 model_token_context = model_context_dict[model_engine]['context']
 
 
