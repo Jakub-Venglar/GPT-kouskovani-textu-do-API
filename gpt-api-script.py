@@ -1,4 +1,4 @@
-import os, openai, json, tiktoken, time, httpx
+import os, openai, json, tiktoken, time, httpx, unicodedata, re
 #from playsound import playsound
 
 # pokud je počet tokenů v odstavci delší než maximum, smysluplně ho rozdělit
@@ -230,6 +230,27 @@ for i in range(len(paragraphs)):
     with open(result_name, 'a', encoding='utf-8') as file: # na závěr smyčky přidá text na konec souboru s výsledkem, postupně tak přidává jednotlivé odstavce
                 file.write(generated_text)
 
+#rovnou vložíme kód člověka pro přepis
+
+input_path = result_name  # např. 'vysledek.txt'
+output_path = input_path + '_processed.txt' 
+
+with open(input_path, 'r', encoding='utf-8') as fin, \
+     open(output_path, 'w', encoding='utf-8') as fout:
+    for line in fin:
+        if line.rstrip().endswith('(host)'):
+            match = re.match(r'(.+?)\s*\(host\)\s*$', line.rstrip())
+            if match:
+                # Vezme poslední slovo jako příjmení
+                surname = match.group(1).split()[-1]
+                # Odstraní diakritiku a převede na malá písmena
+                normalized = unicodedata.normalize('NFKD', surname) \
+                                    .encode('ASCII', 'ignore') \
+                                    .decode() \
+                                    .lower()
+                fout.write(f'{{% include 2050/transcript-person.html id="{normalized}" %}}\n')
+                continue
+        fout.write(line)
 
 print('***HOTOVO***') #je li vše zpracováno, dá nám vědět
 #playsound('hotovo.mp3')
