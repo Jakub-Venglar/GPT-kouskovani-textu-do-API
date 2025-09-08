@@ -248,8 +248,11 @@ with open(input_path, 'r', encoding='utf-8') as fin, \
                                     .encode('ASCII', 'ignore') \
                                     .decode() \
                                     .lower()
-                fout.write(f'{{% include 2050/transcript-person.html id="{normalized}" %}}\n')
-                continue
+
+                line = f'{{% include 2050/transcript-person.html id="{normalized}" %}}\n'
+                
+        # Náhrada CO2 -> CO<sub>2</sub>
+        line = line.replace("CO2", "CO<sub>2</sub>")
         fout.write(line)
 
 print('***HOTOVO***') #je li vše zpracováno, dá nám vědět
